@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#06160f"><title>The Emerald Chronicles 3D — Ladyrevyn</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#06130e;color:#f6efd9;font-family:Georgia,serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:12px}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.glass{background:#06180fd9;border:1px solid #b8a66b88;border-radius:14px;padding:10px 12px;box-shadow:0 5px 20px #0007;backdrop-filter:blur(7px)}
+h1{font-size:clamp(16px,4vw,23px);font-weight:normal;color:#f0d991;margin:0 0 3px}.muted{font-size:11px;color:#c5d3bd}
+#counter{font-size:12px;white-space:nowrap}
+.bottom{display:flex;justify-content:space-between;align-items:end;gap:10px}
+#hint{max-width:min(65vw,390px);font-size:13px;line-height:1.35}
+#controls{display:flex;gap:7px;pointer-events:auto;align-items:end}
+.pad{display:grid;grid-template-columns:repeat(3,43px);grid-template-rows:repeat(2,43px);gap:4px}
+.ctrl{border:1px solid #c8b77b99;background:#102b20dd;color:#fff2c7;border-radius:12px;font-size:18px;min-width:43px;min-height:43px;touch-action:none}
+#interact{height:90px;width:68px;border-radius:18px;background:#775c2ddd;font-size:12px}
+#overlay{position:fixed;inset:0;background:#020a07d9;display:flex;align-items:center;justify-content:center;padding:18px;z-index:5}
+.modal{width:min(520px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#183d2b,#081a12);border:1px solid #d4bd79;border-radius:20px;padding:22px;text-align:center;box-shadow:0 20px 70px #000}
+.modal h2{color:#f0d991;font-weight:normal;font-size:27px;margin:4px 0 12px}.modal p{line-height:1.55;color:#e5e8d9}
+button{font-family:inherit;cursor:pointer}.gold{border:1px solid #e6d18e;background:linear-gradient(#94763d,#5b4524);color:#fff4d1;padding:12px 20px;border-radius:30px;font-size:15px;margin:5px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.answers button{padding:12px 8px;border-radius:12px;border:1px solid #779476;background:#183a2a;color:#f6efd9}
+#toast{position:fixed;left:50%;top:20%;transform:translateX(-50%);background:#071b12ee;border:1px solid #d6c27d;border-radius:12px;padding:12px 17px;z-index:4;text-align:center;display:none;max-width:85vw}
+@media(min-width:800px){.pad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,48px)}.ctrl{min-width:52px;min-height:48px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+ <div class="top">
+  <div class="glass"><h1>The Emerald Chronicles 3D</h1><div class="muted">Petualangan ulang tahun · 17 November</div></div>
+  <div class="glass" id="counter">🎁 0 / 3 hadiah</div>
+ </div>
+ <div class="bottom">
+  <div class="glass" id="hint">Jelajahi hutan. Dekati penjaga atau cahaya hadiah, lalu tekan AKSI.</div>
+  <div id="controls">
+   <div class="pad">
+    <button class="ctrl" style="grid-column:2" data-move="forward">▲</button>
+    <button class="ctrl" style="grid-column:1;grid-row:2" data-move="left">◀</button>
+    <button class="ctrl" style="grid-column:2;grid-row:2" data-move="back">▼</button>
+    <button class="ctrl" style="grid-column:3;grid-row:2" data-move="right">▶</button>
+   </div>
+   <button class="ctrl" id="interact">✦<br>AKSI</button>
+  </div>
+ </div>
+</div>
+<div id="toast"></div>
+<div id="overlay"><div class="modal" id="modal">
+ <div style="font-size:44px">🌲 🐈‍⬛ 🐦‍⬛</div><h2>The Emerald Chronicles</h2>
+ <p>Sebuah hutan ajaib menyimpan tiga hadiah untuk <b>Erica gendatt — Ladyrevyn</b>. Temui gagak, ular, kucing hitam, dan penyihir. Pecahkan teka-teki untuk membuka kejutan ulang tahun.</p>
+ <p class="muted">Kontrol: tombol panah di layar atau WASD. Dekati karakter / benda bercahaya lalu tekan AKSI atau spasi.</p>
+ <button class="gold" id="start">Mulai petualangan ✨</button>
+</div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const mount=document.getElementById('game');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x91a88a);scene.fog=new THREE.FogExp2(0x91a88a,.026);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;mount.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xcce8d0,0x17251a,2));
+const moon=new THREE.DirectionalLight(0xffe7b0,2.4);moon.position.set(-12,24,8);moon.castShadow=true;moon.shadow.mapSize.set(1024,1024);scene.add(moon);
+const mat=(c,r=.85,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const groundMat=mat(0x183b28),trunkMat=mat(0x39291c),leafMat=mat(0x173d2a),leaf2=mat(0x28583a),stoneMat=mat(0x59695a),goldMat=mat(0xd8b85e,.3,.55);
+function box(w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+function sphere(r,m,x,y,z,sx=1,sy=1,sz=1){let o=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;scene.add(o);return o}
+let floor=new THREE.Mesh(new THREE.PlaneGeometry(150,150),groundMat);floor.rotation.x=-Math.PI/2;floor.position.y=-.08;floor.receiveShadow=true;scene.add(floor);
+// winding river
+let river=new THREE.Mesh(new THREE.PlaneGeometry(5,58),new THREE.MeshStandardMaterial({color:0x397f86,roughness:.22,metalness:.25,transparent:true,opacity:.82}));river.rotation.x=-Math.PI/2;river.rotation.z=-.16;river.position.set(3,.005,-3);scene.add(river);
+// river banks and stepping stones
+for(let i=0;i<12;i++){let z=-28+i*5;let s=sphere(.7,stoneMat,3+Math.sin(i*.8)*1.1,.08,z,.9,.25,.65)}
+// trees
+for(let i=0;i<115;i++){let x=(Math.random()-.5)*82,z=(Math.random()-.5)*82;if(Math.abs(x)<7&&z>-18&&z<18)continue;let h=3+Math.random()*3;let t=new THREE.Mesh(new THREE.CylinderGeometry(.25,.42,h,7),trunkMat);t.position.set(x,h/2,z);t.castShadow=true;scene.add(t);let crown=sphere(1.65,Math.random()>.5?leafMat:leaf2,x,h+1,z,1.15,1.5,1.1);crown.castShadow=true;}
+// mushrooms, glowing flowers
+for(let i=0;i<40;i++){let x=(Math.random()-.5)*45,z=(Math.random()-.5)*45;let stem=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,.3,7),mat(0xd9d1ad));stem.position.set(x,.15,z);scene.add(stem);sphere(.16,mat(0xc16d69),x,.34,z,1,.55,1)}
+// castle
+const castleX=-13,castleZ=-20;
+box(12,7,7,mat(0x777c69),castleX,3.5,castleZ);box(14,.5,8,goldMat,castleX,7,castleZ);
+for(let x of [-18,-8])for(let z of [-23,-17]){let tower=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.4,10,8),stoneMat);tower.position.set(x,5,z);scene.add(tower);let roof=new THREE.Mesh(new THREE.ConeGeometry(1.6,3,8),mat(0x244a36));roof.position.set(x,11,z);scene.add(roof)}
+// waterfall cliff at rear
+box(15,7,2,stoneMat,12,3.5,-31);let fall=new THREE.Mesh(new THREE.PlaneGeometry(5,7),new THREE.MeshStandardMaterial({color:0x8ed8d4,transparent:true,opacity:.72,roughness:.2}));fall.position.set(12,3.5,-29.9);scene.add(fall);box(17,.3,4,mat(0x3e7050),12,.1,-28);
+// player
+const player=new THREE.Group();scene.add(player);
+let body=sphere(.38,mat(0x345d48),0,.72,0,.75,1.2,.55);body.parent.removeFromParent();player.add(body);
+let head=sphere(.25,mat(0xe0c39b),0,1.35,0);player.add(head);
+let hood=sphere(.29,mat(0x17271e),0,1.48,-.04,1,1,.9);player.add(hood);
+let eyeMat=mat(0xe5d68d,.25,0.1);sphere(.045,eyeMat,-.1,1.38,.22).parent?.removeFromParent(); // decorative eyes on hood
+let e1=sphere(.035,eyeMat,-.1,1.39,.23);let e2=sphere(.035,eyeMat,.1,1.39,.23);player.add(e1,e2);
+player.position.set(0,0,12);
+function raven(x,y,z){let g=new THREE.Group();let black=mat(0x111820,.45,.15);let b=sphere(.42,black,0,0,0,1.25,.8,1);g.add(b);let h=sphere(.22,black,.3,.25,.05);g.add(h);let beak=new THREE.Mesh(new THREE.ConeGeometry(.09,.32,6),goldMat);beak.rotation.x=Math.PI/2;beak.position.set(.5,.2,.12);g.add(beak);let wing1=sphere(.3,black,-.15,.08,.25,1.3,.18,.55);g.add(wing1);g.position.set(x,y,z);scene.add(g);return g}
+function snake(x,z){let g=new THREE.Group();let green=mat(0x4f9b64);for(let i=0;i<5;i++){let s=sphere(.22,green,Math.sin(i*.7)*.45,.2, i*.42,1,.8,1.25);g.add(s)}let h=sphere(.25,green,0,.25,2);g.add(h);let eyes=mat(0xe9d46e);let a=sphere(.045,eyes,-.1,.34,2.18),b=sphere(.045,eyes,.1,.34,2.18);g.add(a,b);g.position.set(x,0,z);scene.add(g);return g}
+function cat(x,z){let g=new THREE.Group(),black=mat(0x101513),green=mat(0x8fdb8b);let b=sphere(.34,black,0,.4,0,1.2,.85,1.4);g.add(b);let h=sphere(.27,black,0,.8,.35);g.add(h);for(let s of [-1,1]){let ear=new THREE.Mesh(new THREE.ConeGeometry(.12,.3,5),black);ear.position.set(s*.17,1.05,.3);g.add(ear);let eye=sphere(.045,green,s*.1,.83,.59);g.add(eye)}let tail=sphere(.1,black,0,.5,-.55,.8,.8,2);tail.rotation.x=1;g.add(tail);g.position.set(x,0,z);scene.add(g);return g}
+function witch(x,z){let g=new THREE.Group(),robe=mat(0x38284f),skin=mat(0xd7b18b),hat=mat(0x19291f);let r=new THREE.Mesh(new THREE.ConeGeometry(.65,1.5,8),robe);r.position.y=.8;g.add(r);g.add(sphere(.25,skin,0,1.7,0));let h=new THREE.Mesh(new THREE.ConeGeometry(.55,1.05,8),hat);h.position.y=2.3;g.add(h);let brim=new THREE.Mesh(new THREE.CylinderGeometry(.65,.65,.09,12),hat);brim.position.y=1.85;g.add(brim);g.position.set(x,0,z);scene.add(g);return g}
+const ravenObj=raven(-7,2.5,3),snakeObj=snake(7,-4),catObj=cat(-5,9),witchObj=witch(-13,-13);
+function marker(x,z,color=0xe6cb6b){let p=new THREE.PointLight(color,1.7,6);p.position.set(x,1.3,z);scene.add(p);let gem=new THREE.Mesh(new THREE.OctahedronGeometry(.32),goldMat);gem.position.set(x,1.2,z);scene.add(gem);return {p,gem}}
+let markers=[marker(-7,3),marker(7,-4,0x82d9dd),marker(-13,-13)];
+// gift pedestals
+let gifts=[[-15,5], [13,12], [-13,-24]];
+let giftObjects=gifts.map(([x,z],i)=>{let p=box(1.5,.6,1.5,mat(0x5d4b2d),x,.3,z);let gem=new THREE.Mesh(new THREE.IcosahedronGeometry(.42),goldMat);gem.position.set(x,1.25,z);scene.add(gem);let l=new THREE.PointLight(0xe8cf83,2,7);l.position.set(x,2,z);scene.add(l);return {p,gem,l,x,z,i}});
+let got=[false,false,false],near=null,started=false,quizIndex=-1;
+const puzzles=[
+{title:"Teka-teki Gagak",text:"Aku bersayap hitam, suka bertengger di dahan, dan bersuara 'kraa'. Siapakah aku?",opts:["Gagak","Kelinci","Ikan","Rusa"],correct:0,prize:"Hadiah I — Harapan",message:"Semoga hari-harimu dipenuhi kebahagiaan kecil dan harapan baru."},
+{title:"Teka-teki Ular",text:"Aku mengalir melewati hutan, punya tepian, tetapi bukan jalan. Apakah aku?",opts:["Awan","Sungai","Gunung","Api"],correct:1,prize:"Hadiah II — Kekuatan",message:"Saat perjalanan terasa berat, ingatlah bahwa langkah kecil tetap membawamu maju."},
+{title:"Rahasia Penyihir",text:"Aku berkelip di langit malam, menemani bulan dan jauh di atas pepohonan. Apakah aku?",opts:["Bintang","Daun","Batu","Bunga"],correct:0,prize:"Hadiah III — Sang Ratu",message:"Teruslah bermimpi besar, percaya pada dirimu, dan bersinar dengan caramu sendiri."}
+];
+const modal=document.getElementById('modal'),overlay=document.getElementById('overlay'),hint=document.getElementById('hint'),toast=document.getElementById('toast');
+document.getElementById('start').onclick=()=>{overlay.style.display='none';started=true;hint.textContent='Cari gagak di sebelah kiri. Dekati sampai muncul petunjuk, lalu tekan AKSI.'};
+function popup(title,html,buttons){modal.innerHTML=`<h2>${title}</h2>${html}${buttons||''}`;overlay.style.display='flex'}
+function showQuiz(i){quizIndex=i;let q=puzzles[i];popup(q.title,`<p>${q.text}</p><div class="answers">${q.opts.map((v,n)=>`<button data-answer="${n}">${v}</button>`).join('')}</div><p id="result" class="muted"></p>`);modal.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{let n=+b.dataset.answer;if(n===q.correct){got[i]=true;document.getElementById('counter').textContent=`🎁 ${got.filter(Boolean).length} / 3 hadiah`;document.getElementById('result').textContent='Benar! '+q.prize+' terbuka. '+q.message;modal.querySelectorAll('[data-answer]').forEach(x=>x.disabled=true);let btn=document.createElement('button');btn.className='gold';btn.textContent='Lanjutkan';btn.onclick=()=>{overlay.style.display='none';hint.textContent=q.message;if(got.every(Boolean))ending()};modal.appendChild(btn);toastMsg('✨ Hadiah ditemukan!');}else document.getElementById('result').textContent='Belum tepat. Coba lagi, kamu pasti bisa.';});}
+function ending(){popup('Selamat Ulang Tahun, Ladyrevyn! 👑',`<p>Untuk Erica gendatt — semoga 17 November menjadi awal dari babak yang penuh kesempatan, keberanian, dan kebahagiaan.</p><p>Jangan menyerah saat jalan terasa sulit. Kamu sudah melangkah sejauh ini. Teruslah tumbuh, percaya pada kemampuanmu, dan kejar semua impianmu.</p><p><b>Semoga semua hal baik menemukan jalannya kepadamu. Selamat ulang tahun, Queen Revyn. 💚</b></p>`,'<button class="gold" id="finish">Kembali ke hutan</button>');document.getElementById('finish').onclick=()=>{overlay.style.display='none';hint.textContent='Semua hadiah ditemukan. Hutan zamrud merayakan Queen Revyn!'};}
+function toastMsg(t){toast.textContent=t;toast.style.display='block';setTimeout(()=>toast.style.display='none',1800)}
+const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){e.preventDefault();act()}});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+document.querySelectorAll('[data-move]').forEach(b=>{let k=b.dataset.move;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>keys[k]=false));});
+document.getElementById('interact').onclick=act;
+function act(){if(!started||overlay.style.display==='flex')return;if(near?.type==='npc'){let i=near.i;if(i===0)showQuiz(0);if(i===1)showQuiz(1);if(i===2)showQuiz(2);}else if(near?.type==='gift'){let i=near.i;if(got[i])toastMsg(puzzles[i].prize+' sudah kamu temukan!');else toastMsg('Dekati penjaganya untuk membuka teka-teki.');}else toastMsg('Jelajahi hutan dan cari cahaya berikutnya.');}
+function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z)}
+function updateNear(){let options=[{type:'npc',i:0,obj:ravenObj.position},{type:'npc',i:1,obj:snakeObj.position},{type:'npc',i:2,obj:witchObj.position},...giftObjects.map(g=>({type:'gift',i:g.i,obj:{x:g.x,z:g.z}}))];let best=null,bd=4.2;for(let o of options){let d=dist(player.position,o.obj);if(d<bd){bd=d;best=o}}near=best;if(best){let names=best.type==='npc'?['Gagak','Ular','Penyihir']:['Hadiah I','Hadiah II','Hadiah III'];hint.textContent=`${names[best.i]} di dekatmu — tekan AKSI`; } }
+let clock=new THREE.Clock();
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04);if(started&&overlay.style.display!=='flex'){let dx=0,dz=0;if(keys.w||keys.arrowup||keys.forward)dz-=1;if(keys.s||keys.arrowdown||keys.back)dz+=1;if(keys.a||keys.arrowleft||keys.left)dx-=1;if(keys.d||keys.arrowright||keys.right)dx+=1;let len=Math.hypot(dx,dz)||1;dx/=len;dz/=len;player.position.x+=dx*dt*5;player.position.z+=dz*dt*5;player.position.x=THREE.MathUtils.clamp(player.position.x,-35,35);player.position.z=THREE.MathUtils.clamp(player.position.z,-35,35);if(dx||dz)player.rotation.y=Math.atan2(dx,dz);camera.position.lerp(new THREE.Vector3(player.position.x,player.position.y+5.5,player.position.z+8),.09);camera.lookAt(player.position.x,.8,player.position.z);updateNear();}
+let t=clock.elapsedTime;markers.forEach((m,i)=>{m.gem.rotation.y+=dt*1.5;m.gem.position.y=1.2+Math.sin(t*2+i)*.16});giftObjects.forEach((g,i)=>{g.gem.rotation.y+=dt*1.3;g.gem.position.y=1.25+Math.sin(t*2+i)*.13;g.l.intensity=got[i]?.25:2});ravenObj.rotation.z=Math.sin(t*2)*.08;catObj.rotation.y=Math.sin(t)*.12;renderer.render(scene,camera)}
+camera.position.set(0,6,20);camera.lookAt(0,0,10);animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
