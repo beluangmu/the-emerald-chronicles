@@ -56,11 +56,25 @@ button{font-family:inherit;cursor:pointer}.gold{border:1px solid #e6d18e;backgro
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 const mount=document.getElementById('game');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x91a88a);scene.fog=new THREE.FogExp2(0x91a88a,.026);
-const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;mount.appendChild(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0xcce8d0,0x17251a,2));
-const moon=new THREE.DirectionalLight(0xffe7b0,2.4);moon.position.set(-12,24,8);moon.castShadow=true;moon.shadow.mapSize.set(1024,1024);scene.add(moon);
-const mat=(c,r=.85,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 180);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+mount.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xcce8d0, 0x17251a, 1.35));
+
+const moon = new THREE.DirectionalLight(0xd7e8cf, 2.0);
+moon.position.set(-12, 24, 8);
+moon.castShadow = true;
+moon.shadow.mapSize.set(1024, 1024);
+scene.add(moon);const mat=(c,r=.85,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
 const groundMat=mat(0x183b28),trunkMat=mat(0x39291c),leafMat=mat(0x173d2a),leaf2=mat(0x28583a),stoneMat=mat(0x59695a),goldMat=mat(0xd8b85e,.3,.55);
 function box(w,h,d,m,x,y,z){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
 function sphere(r,m,x,y,z,sx=1,sy=1,sz=1){let o=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;scene.add(o);return o}
